@@ -1,0 +1,53 @@
+version: '3'
+
+services:
+
+  db:
+    image: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: on-failure
+
+  redis:
+    image: redis
+    ports:
+      - 6379:6379
+    restart: on-failure
+
+  poll:
+    image: ./poll/
+    ports:
+      - 5000:80
+    networks:
+      - poll-tier
+    depends_on:
+      - redis
+    restart: on-failure
+
+  worker:
+    image: ./worker/
+    networks:
+      - back-tier
+    depends_on:
+      - db
+      - redis
+    restart: on-failure
+
+  result:
+    image: ./result/
+    ports:
+      - 5001:80
+    networks:
+      - result-tier
+    depends_on:
+      - db
+    restart: on-failure
+
+volumes:
+  - db-data:
+
+networks:
+  - result-tier:
+  - poll-tier:
+  - back-tier:
